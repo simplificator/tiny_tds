@@ -1,0 +1,37 @@
+name: Build and test gem
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  cross-compile:
+    name: Cross-compile gem
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '2.7'
+          bundler-cache: true
+      - name: Write used versions into file
+        run: |
+          bundle exec rake ports:version_file
+      - name: Cache ports
+        uses: actions/cache@v3
+        with:
+          path: ./ports
+          key: ${{ hashFiles('**/.ports_versions') }}
+      - name: Build gem
+        run: |
+          bundle exec rake gem
+          bundle exec rake gem:native
+      - name: Move gems into separate directory before persisting
+        run: |
+          mkdir -p artifacts/gems
+          mv pkg/*.gem artifacts/gems
+      - uses: actions/upload-artifact@v3
+        with:
+          name: gems
+          path: artifacts/gems
