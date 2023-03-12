@@ -1,0 +1,157 @@
+name: Build and test gem
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  cross-compile:
+    name: Cross-compile gem
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '2.7'
+          bundler-cache: true
+      - name: Write used versions into file
+        run: |
+          bundle exec rake ports:version_file
+      - name: Cache ports
+        uses: actions/cache@v3
+        with:
+          path: ./ports
+          key: cross-compiled-${{ hashFiles('**/.ports_versions') }}
+      - name: Build gem
+        run: |
+          bundle exec rake gem
+          bundle exec rake gem:native
+      - name: Move gems into separate directory before persisting
+        run: |
+          mkdir -p artifacts/gems
+          mv pkg/*.gem artifacts/gems
+      - uses: actions/upload-artifact@v3
+        with:
+          name: gems
+          path: artifacts/gems
+
+  test-windows:
+    needs:
+      - cross-compile
+    strategy:
+      matrix:
+        ruby-version: [ 2.4, 2.5, 2.6, 2.7 ]
+    name: Test on Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby-version }}
+          bundler-cache: true
+
+      - name: Download precompiled gem
+        uses: actions/download-artifact@v3
+        with:
+          name: gems
+
+      - name: Install native gem and restore cross-compiled code from it
+        shell: pwsh
+        run: |
+          $rubyArchitecture = (ruby -e 'puts RUBY_PLATFORM').Trim()
+          $gemVersion = (Get-Content VERSION).Trim()
+          
+          gem install --local --install-dir=./tmp "./tiny_tds-$gemVersion-$rubyArchitecture.gem"
+
+          # Restore precompiled code
+          $source = (Resolve-Path ".\tmp\gems\tiny_tds-$gemVersion-$rubyArchitecture\lib\tiny_tds").Path
+          $destination = (Resolve-Path ".\lib\tiny_tds").Path
+          Get-ChildItem $source -Recurse -Exclude "*.rb" | Copy-Item -Destination {Join-Path $destination $_.FullName.Substring($source.length)}
+          
+          # Restore ports
+          Copy-Item -Path ".\tmp\gems\tiny_tds-$gemVersion-$rubyArchitecture\ports" -Destination "." -Recurse
+
+      - name: Setup MSSQL
+        uses: potatoqualitee/mssqlsuite@v1.7
+        with:
+          install: sqlengine, sqlclient
+          version: 2017
+          sa-password: c0MplicatedP@ssword
+          show-log: true
+
+      - name: Setup MSSQL database
+        shell: pwsh
+        run: |
+          & sqlcmd -S localhost -U sa -P "c0MplicatedP@ssword" -Q "CREATE DATABASE [tinytdstest];"
+          & sqlcmd -S localhost -U sa -P "c0MplicatedP@ssword" -Q "CREATE LOGIN [tinytds] WITH PASSWORD = '', CHECK_POLICY = OFF, DEFAULT_DATABASE = [tinytdstest];"
+          & sqlcmd -S localhost -U sa -P "c0MplicatedP@ssword" -Q "USE [tinytdstest]; CREATE USER [tinytds] FOR LOGIN [tinytds]; EXEC sp_addrolemember N'db_owner', N'tinytds';"
+
+      - name: Install toxiproxy-server
+        shell: pwsh
+        run: |
+          choco install toxiproxy-server --version=2.5.0 -y
+          Start-Process toxiproxy-server
+
+      - name: Test gem
+        shell: pwsh
+        run: bundle exec rake test
+        env:
+          TOXIPROXY_HOST: "localhost"
+
+  test-linux:
+    strategy:
+      matrix:
+        ruby-version: [ 2.4, 2.5, 2.6, 2.7 ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby-version }}
+          bundler-cache: true
+
+      - name: Write used versions into file
+        run: |
+          bundle exec rake ports:version_file
+
+      - name: Cache ports
+        uses: actions/cache@v3
+        with:
+          path: ./ports
+          key: native-${{ hashFiles('**/.ports_versions') }}
+
+      - name: Build required libraries
+        run: |
+          bundle exec rake ports
+
+      - name: Build gem
+        run: |
+          bundle exec rake build
+
+      - name: Setup MSSQL
+        uses: potatoqualitee/mssqlsuite@v1.7
+        with:
+          install: sqlengine, sqlclient
+          version: 2017
+          sa-password: "c0MplicatedP@ssword"
+          show-log: true
+
+      - name: Setup MSSQL database
+        run: |
+          sqlcmd -S localhost -U sa -P "c0MplicatedP@ssword" -Q "CREATE DATABASE [tinytdstest];"
+          sqlcmd -S localhost -U sa -P "c0MplicatedP@ssword" -Q "CREATE LOGIN [tinytds] WITH PASSWORD = '', CHECK_POLICY = OFF, DEFAULT_DATABASE = [tinytdstest];"
+          sqlcmd -S localhost -U sa -P "c0MplicatedP@ssword" -Q "USE [tinytdstest]; CREATE USER [tinytds] FOR LOGIN [tinytds]; EXEC sp_addrolemember N'db_owner', N'tinytds';"
+
+      - name: Install toxiproxy-server
+        run: |
+          wget -O toxiproxy-2.5.0.deb https://github.com/Shopify/toxiproxy/releases/download/v2.5.0/toxiproxy_2.5.0_linux_amd64.deb
+          sudo dpkg -i toxiproxy-2.5.0.deb
+          sudo toxiproxy-server &
+
+      - name: Run tests
+        run: bundle exec rake test
+        env:
+          TOXIPROXY_HOST: "localhost"
