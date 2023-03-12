@@ -22,7 +22,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ./ports
-          key: ${{ hashFiles('**/.ports_versions') }}
+          key: cross-compiled-${{ hashFiles('**/.ports_versions') }}
       - name: Build gem
         run: |
           bundle exec rake gem
@@ -96,6 +96,62 @@ jobs:
 
       - name: Test gem
         shell: pwsh
+        run: bundle exec rake test
+        env:
+          TOXIPROXY_HOST: "localhost"
+
+  test-linux:
+    strategy:
+      matrix:
+        ruby-version: [ 2.4, 2.5, 2.6, 2.7 ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ matrix.ruby-version }}
+          bundler-cache: true
+
+      - name: Write used versions into file
+        run: |
+          bundle exec rake ports:version_file
+
+      - name: Cache ports
+        uses: actions/cache@v3
+        with:
+          path: ./ports
+          key: native-${{ hashFiles('**/.ports_versions') }}
+
+      - name: Build required libraries
+        run: |
+          bundle exec rake ports
+
+      - name: Build gem
+        run: |
+          bundle exec rake build
+
+      - name: Setup MSSQL
+        uses: potatoqualitee/mssqlsuite@v1.7
+        with:
+          install: sqlengine, sqlclient
+          version: 2017
+          sa-password: "c0MplicatedP@ssword"
+          show-log: true
+
+      - name: Setup MSSQL database
+        run: |
+          sqlcmd -S localhost -U sa -P "c0MplicatedP@ssword" -Q "CREATE DATABASE [tinytdstest];"
+          sqlcmd -S localhost -U sa -P "c0MplicatedP@ssword" -Q "CREATE LOGIN [tinytds] WITH PASSWORD = '', CHECK_POLICY = OFF, DEFAULT_DATABASE = [tinytdstest];"
+          sqlcmd -S localhost -U sa -P "c0MplicatedP@ssword" -Q "USE [tinytdstest]; CREATE USER [tinytds] FOR LOGIN [tinytds]; EXEC sp_addrolemember N'db_owner', N'tinytds';"
+
+      - name: Install toxiproxy-server
+        run: |
+          wget -O toxiproxy-2.5.0.deb https://github.com/Shopify/toxiproxy/releases/download/v2.5.0/toxiproxy_2.5.0_linux_amd64.deb
+          sudo dpkg -i toxiproxy-2.5.0.deb
+          sudo toxiproxy-server &
+
+      - name: Run tests
         run: bundle exec rake test
         env:
           TOXIPROXY_HOST: "localhost"
