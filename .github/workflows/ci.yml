@@ -21,7 +21,7 @@ jobs:
       - name: Cache ports
         uses: actions/cache@v3
         with:
-          path: ./ports
+          path: ports
           key: cross-compiled-${{ hashFiles('**/.ports_versions') }}
       - name: Build gem
         run: |
@@ -100,7 +100,32 @@ jobs:
         env:
           TOXIPROXY_HOST: "localhost"
 
+  compile-native-ports:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 2.7
+          bundler-cache: true
+
+      - name: Write used versions into file
+        run: bundle exec rake ports:version_file
+
+      - name: Cache ports
+        uses: actions/cache@v3
+        with:
+          path: ports
+          key: native-${{ hashFiles('**/.ports_versions') }}
+
+      - name: Build required libraries
+        run: |
+          bundle exec rake ports
+
   test-linux:
+    needs:
+      - compile-native-ports
     strategy:
       matrix:
         ruby-version: [ 2.4, 2.5, 2.6, 2.7 ]
@@ -120,12 +145,9 @@ jobs:
       - name: Cache ports
         uses: actions/cache@v3
         with:
-          path: ./ports
+          path: ports
           key: native-${{ hashFiles('**/.ports_versions') }}
-
-      - name: Build required libraries
-        run: |
-          bundle exec rake ports
+          fail-on-cache-miss: true
 
       - name: Build gem
         run: |

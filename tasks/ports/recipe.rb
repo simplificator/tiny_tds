@@ -6,10 +6,11 @@ require 'rbconfig'
 module Ports
   class Recipe < MiniPortile
     def cook
-      checkpoint = "ports/#{name}-#{version}-#{host}.installed"
+      checkpoint = "ports/checkpoints/#{name}-#{version}-#{host}.installed"
 
       unless File.exist? checkpoint
         super
+        FileUtils.mkdir_p("ports/checkpoints")
         FileUtils.touch checkpoint
       end
     end
