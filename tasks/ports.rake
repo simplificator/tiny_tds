@@ -86,14 +86,16 @@ namespace :ports do
   end
 
   desc "Notes the actual versions for the compiled ports into a file"
-  task "version_file" do
+  task "version_file", [:gem_platform] do |_task, args|
+    args.with_defaults(gem_platform: RUBY_PLATFORM)
+
     ports_version = {}
 
     libraries_to_compile.each do |library, library_recipe|
       ports_version[library] = library_recipe.version
     end
 
-    ports_version[:platforms] = GEM_PLATFORM_HOSTS.keys
+    ports_version[:platform] = args.gem_platform
 
     File.open(".ports_versions", "w") do |f|
       f.write ports_version
