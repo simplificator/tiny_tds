@@ -31,6 +31,9 @@ jobs:
         with:
           path: ports
           key: cross-compiled-${{ hashFiles('**/.ports_versions') }}
+          restore-keys: |
+            cross-compiled-${{ hashFiles('**/.ports_versions') }}
+            cross-compiled-
       - name: Build gem
         shell: bash
         run: bundle exec rake gem:for_platform[${{ matrix.platform }}]
@@ -209,6 +212,9 @@ jobs:
         with:
           path: ports
           key: native-${{ hashFiles('**/.ports_versions') }}
+          restore-keys: |
+            native-${{ hashFiles('* */.ports_versions') }}
+            native-
 
       - name: Build required libraries
         run: |
