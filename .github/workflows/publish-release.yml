@@ -75,7 +75,7 @@ jobs:
       - name: Push Gems to Cloudsmith
         run: |
           VERSION=$(cat VERSION)
-          export RUBYGEMS_HOST=https://ruby.cloudsmith.io/andyundso/tiny_tds
+          export RUBYGEMS_HOST=https://ruby.cloudsmith.io/simplificator/public
           gem push pkg/tiny_tds-$VERSION.gem
           gem push gem-x64-mingw32/tiny_tds-$VERSION-x64-mingw32.gem
           gem push gem-x64-mingw-ucrt/tiny_tds-$VERSION-x64-mingw-ucrt.gem
