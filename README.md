@@ -16,6 +16,73 @@ The API is simple and consists of these classes:
 * TinyTds::Result - Returned from issuing an #execute on the connection. It includes Enumerable.
 * TinyTds::Error - A wrapper for all FreeTDS exceptions.
 
+### About this fork
+
+We use Ruby on Windows. This gem relies on code written in C that has to be compiled when installing the gem. For Windows users, this can be troublesome (not as much anymore since msys2 is integrated into the Ruby installer), so the main project provides a version of the gem containing a precompiled version of the gem, including necessary binaries (OpenSSL, libiconv, and FreeTDS).
+
+However, the precompiled gem version is locked to Ruby versions below 2.7. At the time of writing, this version goes end of life in two weeks. [We first contributed support for Ruby 3.0](https://github.com/rails-sqlserver/tiny_tds/pull/524) to upstream in early 2023 before sending in another PR [containing optimizations to their continuous integration solution](https://github.com/rails-sqlserver/tiny_tds/pull/525), suggested mainly by a project maintainer. This PR has been in review for a few weeks already. We wanted to prevent being stuck on an unsupported Ruby version. This is how this fork came to be.
+
+Please note that once the upstream version provides Ruby 3.x support, we will discontinue this fork. The archives on Cloudsmith would remain for a while to keep your builds working.
+
+The fork aims to be as close as possible to the original gem but implements the following changes:
+
+* Switch to GitHub Actions. Upstream just changed to CircleCI in November 2022. As mentioned before, we optimized their CircleCI setup but were not fond of CircleCI itself. GitHub Actions does not cost a cent when the project is public and offers an excellent, community-maintained action to set up an MSSQL server on Linux and Windows.
+* Run tests against Ruby 3.0, 3.1, and 3.2, including providing a fat gem for Windows.
+* Update the precompiled OpenSSL version from 1.1.1d to 1.1.1t. The versions in-between have a couple of security vulnerabilities. Chances of exploitation are low, but you better be on the safe side.
+
+To use the gem, update or add the following line to your Gemfile.
+
+```diff
+diff --git a/Gemfile b/Gemfile
+index fb91dda6..7791ee47 100644
+--- a/Gemfile
++++ b/Gemfile
+
+-  gem "tiny_tds"
++  gem "tiny_tds", source: "https://dl.cloudsmith.io/public/simplificator/public/ruby/"
+```
+
+Bundler is smart enough to detect that a newer version on Cloudsmith is provided compared to Rubygems and will switch. It will yield a change to your lock file that would look as follows.
+
+```diff
+diff --git a/Gemfile.lock b/Gemfile.lock
+index 737bb03b..3f8ce67f 100644
+--- a/Gemfile.lock
++++ b/Gemfile.lock
+
++GEM
++  remote: https://dl.cloudsmith.io/public/simplificator/public/ruby/
++  specs:
++    tiny_tds (2.1.6.rc1)
++    tiny_tds (2.1.6.rc1-x64-mingw32)
++
+ GEM
+   remote: https://rubygems.org/
+   specs:
+@@ -407,8 +413,6 @@ GEM
+     thor (1.2.1)
+     tilt (2.0.11)
+     timeout (0.3.1)
+-    tiny_tds (2.1.5)
+-    tiny_tds (2.1.5-x64-mingw32)
+     tzinfo (2.0.5)
+       concurrent-ruby (~> 1.0)
+     tzinfo-data (1.2022.7)
+@@ -505,7 +509,7 @@ DEPENDENCIES
+   sprockets-rails
+   standard
+   tailwindcss-rails (>= 2.0.21)
+-  tiny_tds
++  tiny_tds!
+   tzinfo-data
+   view_component (>= 2.82.0)
+```
+
+If you don't rely on the fat gem, install it from Git instead.
+
+```
+gem 'tiny_tds', git: 'https://github.com/simplificator/tiny_tds.git', tag: 'v2.1.6'
+```
 
 ## Install
 
