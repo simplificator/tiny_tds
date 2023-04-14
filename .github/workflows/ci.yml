@@ -76,7 +76,7 @@ jobs:
       - name: Install native gem and test if TinyTDS loads
         shell: pwsh
         run: |
-          $rubyArchitecture = (ruby -e 'puts RUBY_PLATFORM').Trim()
+          $rubyArchitecture = (ruby -e "puts RbConfig::CONFIG['arch']").Trim()
           $gemVersion = (Get-Content VERSION).Trim()
           $gemToInstall = "./tiny_tds-$gemVersion-$rubyArchitecture.gem"
           
@@ -121,7 +121,7 @@ jobs:
       - name: Install native gem and restore cross-compiled code from it
         shell: pwsh
         run: |
-          $rubyArchitecture = (ruby -e 'puts RUBY_PLATFORM').Trim()
+          $rubyArchitecture = (ruby -e "puts RbConfig::CONFIG['arch']").Trim()
           $gemVersion = (Get-Content VERSION).Trim()
           $gemToInstall = "./tiny_tds-$gemVersion-$rubyArchitecture.gem"
 
@@ -190,7 +190,7 @@ jobs:
       - name: Install native gem and test if TinyTDS loads
         shell: pwsh
         run: |
-          $rubyArchitecture = (ruby -e 'puts RUBY_PLATFORM').Trim()
+          $rubyArchitecture = (ruby -e "puts RbConfig::CONFIG['arch']").Trim()
           $gemVersion = (Get-Content VERSION).Trim()
           $gemToInstall = "./tiny_tds-$gemVersion-$rubyArchitecture.gem"
 
@@ -231,7 +231,7 @@ jobs:
       - name: Install native gem and restore cross-compiled code from it
         shell: pwsh
         run: |
-          $rubyArchitecture = (ruby -e 'puts RUBY_PLATFORM').Trim()
+          $rubyArchitecture = (ruby -e "puts RbConfig::CONFIG['arch']").Trim()
           $gemVersion = (Get-Content VERSION).Trim()
           $gemToInstall = "./tiny_tds-$gemVersion-$rubyArchitecture.gem"
 
