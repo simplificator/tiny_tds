@@ -1,4 +1,4 @@
-ENV['RC_ARCHS'] = '' if RUBY_PLATFORM =~ /darwin/
+ENV['RC_ARCHS'] = '' if RbConfig::CONFIG["arch"] =~ /darwin/
 
 # :stopdoc:
 

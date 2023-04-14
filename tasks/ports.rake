@@ -18,7 +18,7 @@ namespace :ports do
   CLEAN.include "ports/*.installed"
 
   task :openssl, [:host, :gem_platform] do |_task, args|
-    args.with_defaults(host: RbConfig::CONFIG['host'], gem_platform: RUBY_PLATFORM)
+    args.with_defaults(host: RbConfig::CONFIG['host'], gem_platform: RbConfig::CONFIG["arch"])
 
     libraries_to_compile[:openssl].files = [OPENSSL_SOURCE_URI]
     libraries_to_compile[:openssl].host = args.host
@@ -28,7 +28,7 @@ namespace :ports do
   end
 
   task :libiconv, [:host, :gem_platform] do |_task, args|
-    args.with_defaults(host: RbConfig::CONFIG['host'], gem_platform: RUBY_PLATFORM)
+    args.with_defaults(host: RbConfig::CONFIG['host'], gem_platform: RbConfig::CONFIG["arch"])
 
     libraries_to_compile[:libiconv].files = [ICONV_SOURCE_URI]
     libraries_to_compile[:libiconv].host = args.host
@@ -38,7 +38,7 @@ namespace :ports do
   end
 
   task :freetds, [:host, :gem_platform] do |_task, args|
-    args.with_defaults(host: RbConfig::CONFIG['host'], gem_platform: RUBY_PLATFORM)
+    args.with_defaults(host: RbConfig::CONFIG['host'], gem_platform: RbConfig::CONFIG["arch"])
 
     libraries_to_compile[:freetds].files = [FREETDS_SOURCE_URI]
     libraries_to_compile[:freetds].host = args.host
@@ -63,7 +63,7 @@ namespace :ports do
   end
 
   task :compile, [:host, :gem_platform] do |task, args|
-    args.with_defaults(host: RbConfig::CONFIG['host'], gem_platform: RUBY_PLATFORM)
+    args.with_defaults(host: RbConfig::CONFIG['host'], gem_platform: RbConfig::CONFIG["arch"])
 
     puts "Compiling ports for #{args.host} (Ruby platform #{args.gem_platform}) ..."
 
@@ -87,7 +87,7 @@ namespace :ports do
 
   desc "Notes the actual versions for the compiled ports into a file"
   task "version_file", [:gem_platform] do |_task, args|
-    args.with_defaults(gem_platform: RUBY_PLATFORM)
+    args.with_defaults(gem_platform: RbConfig::CONFIG["arch"])
 
     ports_version = {}
 

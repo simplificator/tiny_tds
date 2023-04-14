@@ -10,7 +10,7 @@ require 'tiny_tds/result'
 require 'tiny_tds/gem'
 
 # Support multiple ruby versions, fat binaries under Windows.
-if RUBY_PLATFORM =~ /mingw|mswin/ && RUBY_VERSION =~ /(\d+.\d+)/
+if RbConfig::CONFIG["arch"] =~ /mingw|mswin/ && RUBY_VERSION =~ /(\d+.\d+)/
   ver = Regexp.last_match(1)
 
   add_dll_path = proc do |path, &block|

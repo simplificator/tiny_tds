@@ -15,7 +15,7 @@ end
 # assumes you are in a container provided by Rake compiler
 # if not, use the task above
 task 'gem:for_platform', [:gem_platform] do |_task, args|
-  args.with_defaults(gem_platform: RUBY_PLATFORM)
+  args.with_defaults(gem_platform: RbConfig::CONFIG["arch"])
 
   sh "bundle install"
   Rake::Task["ports:compile"].invoke(GEM_PLATFORM_HOSTS[args.gem_platform][:host], args.gem_platform)
