@@ -197,12 +197,15 @@ jobs:
           path: test/reports
 
   cross_compile_gem:
-    machine:
-      image: ubuntu-2004:current
+    parameters:
+      platform:
+        description: "Platform to compile the gem resources"
+        type: string
+
+    docker:
+      - image: "larskanis/rake-compiler-dock-mri-<< parameters.platform >>:1.1.0"
 
     steps:
-      - ruby/install:
-          version: '2.7'
       - checkout
       - restore_cache:
           name: restore gem cache
@@ -225,7 +228,7 @@ jobs:
       - run:
           name: Write used versions for ports into file
           command: |
-            bundle exec rake ports:version_file
+            bundle exec rake ports:version_file[<< parameters.platform >>]
 
       - restore_cache:
           name: restore ports cache
@@ -234,16 +237,15 @@ jobs:
             - ports-
 
       - run:
-          name: Build gems
+          name: Build gem
           command: |
-            bundle exec rake gem
-            bundle exec rake gem:native
+            bundle exec rake gem:for_platform[<< parameters.platform >>]
 
       - run:
           name: Move gems into separate directory before caching
           command: |
-            mkdir -p artifacts/gems
-            mv pkg/*.gem artifacts/gems
+            mkdir -p artifacts-<< parameters.platform >>/gems
+            mv pkg/*.gem artifacts-<< parameters.platform >>/gems
 
       - store_artifacts:
           path: artifacts/gems
@@ -263,7 +265,12 @@ jobs:
 workflows:
   test_supported_ruby_versions:
     jobs:
-      - cross_compile_gem
+      - cross_compile_gem:
+          matrix:
+            parameters:
+              platform:
+                - "x86-mingw32"
+                - "x64-mingw32"
       - test_windows:
           requires:
             - cross_compile_gem
